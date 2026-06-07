@@ -5,6 +5,12 @@
 
 package dev.hasali.archery.presentation
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -46,6 +53,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButton
@@ -54,6 +64,9 @@ import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.touchTargetAwareSize
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
+import androidx.wear.ongoing.OngoingActivity
+import androidx.wear.ongoing.Status
+import dev.hasali.archery.R
 import dev.hasali.archery.presentation.theme.AndroidTheme
 import kotlin.math.PI
 import kotlin.math.abs
@@ -64,11 +77,27 @@ import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+private const val CHANNEL_ID = "activity"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ensureNotificationChannel()
         setContent {
             WearApp()
+        }
+    }
+
+    private fun ensureNotificationChannel() {
+        val manager = getSystemService(NotificationManager::class.java)
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Active Session",
+                    NotificationManager.IMPORTANCE_LOW,
+                ),
+            )
         }
     }
 }
@@ -81,23 +110,68 @@ fun WearApp() {
         .observeSession()
         .collectAsState(initial = ArcherySessionState.Loading)
 
+    val isSessionActive = sessionState is ArcherySessionState.Active
+
+    LaunchedEffect(isSessionActive) {
+        if (isSessionActive) {
+            val touchIntent = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+            val builder = NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setContentTitle("Archery session active")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(touchIntent)
+                .setOngoing(true)
+                .setSilent(true)
+
+            val ongoingActivity = OngoingActivity
+                .Builder(context, 1, builder)
+                .setTouchIntent(touchIntent)
+                .setStatus(Status.forPart(Status.TextPart("Session active")))
+                .build()
+
+            ongoingActivity.apply(context)
+
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return@LaunchedEffect
+            }
+
+            NotificationManagerCompat.from(context).notify(1, builder.build())
+        } else {
+            NotificationManagerCompat.from(context).cancel(1)
+        }
+    }
+
     AndroidTheme {
         AppScaffold {
             when (val state = sessionState) {
                 ArcherySessionState.Loading -> {}
-                ArcherySessionState.Inactive ->
+
+                ArcherySessionState.Inactive -> {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         Text("No session active")
                     }
-                is ArcherySessionState.Active ->
+                }
+
+                is ArcherySessionState.Active -> {
                     ScoringScreen(
                         session = state.session,
                         onScoreTapped = { score -> client.addScore(state.session.sessionId, score.id) },
                         onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
                     )
+                }
             }
         }
     }
@@ -253,6 +327,6 @@ class SquircleShape : Shape {
 
 @WearPreviewDevices
 @Composable
-fun DefaultPreview() {
+private fun DefaultPreview() {
     WearApp()
 }

@@ -83,6 +83,8 @@ dependencies {
     implementation(libs.androidx.wear.compose.foundation)
     implementation(libs.androidx.wear.compose.ui.tooling)
     implementation(libs.androidx.compose.material.icons)
+    implementation(libs.androidx.wear)
+    implementation(libs.androidx.wear.ongoing)
     implementation(libs.androidx.wear.tooling.preview)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)

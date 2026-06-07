@@ -18,6 +18,8 @@ lifecycleViewmodelCompose = "2.10.0"
 navigationCompose = "2.9.8"
 playServicesWearable = "20.0.1"
 sqldelight = "2.3.2"
+wear = "1.4.0"
+wearOngoing = "1.1.0"
 wearToolingPreview = "1.0.0"
 
 [libraries]
@@ -39,9 +41,11 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-wear = { group = "androidx.wear", name = "wear", version.ref = "wear" }
 androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation" }
 androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3" }
 androidx-wear-compose-ui-tooling = { group = "androidx.wear.compose", name = "compose-ui-tooling" }
+androidx-wear-ongoing = { group = "androidx.wear", name = "wear-ongoing", version.ref = "wearOngoing" }
 androidx-wear-tooling-preview = { module = "androidx.wear:wear-tooling-preview", version.ref = "wearToolingPreview" }
 compose-ktlint = { module = "io.nlopez.compose.rules:ktlint", version.ref = "composeKtlint" }
 horologist-compose-layout = { module = "com.google.android.horologist:horologist-compose-layout", version.ref = "horologistComposeLayout" }
