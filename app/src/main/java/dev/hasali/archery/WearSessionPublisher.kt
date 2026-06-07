@@ -8,19 +8,26 @@ import com.google.android.gms.wearable.Wearable
 import dev.hasali.archery.data.Score
 import dev.hasali.archery.data.Session
 
-class WearSessionPublisher(private val context: Context) {
-
-    fun publish(sessionId: Int, session: Session) {
+class WearSessionPublisher(
+    private val context: Context,
+) {
+    fun publish(
+        sessionId: Int,
+        session: Session,
+    ) {
         val endScores = getCurrentEndScores(session)
         val keyboard = session.roundDetails.scoringSystem.scores
-        val request = PutDataMapRequest.create("/active-session").apply {
-            dataMap.putInt("sessionId", sessionId)
-            dataMap.putStringArray("endScoreLabels", endScores.map { it.label }.toTypedArray())
-            dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
-            dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
-            dataMap.putStringArray("keyboardScoreLabels", keyboard.map { it.label }.toTypedArray())
-            dataMap.putIntegerArrayList("keyboardScoreColors", ArrayList(keyboard.map { it.color.toArgb() }))
-        }.asPutDataRequest().setUrgent()
+        val request = PutDataMapRequest
+            .create("/active-session")
+            .apply {
+                dataMap.putInt("sessionId", sessionId)
+                dataMap.putStringArray("endScoreLabels", endScores.map { it.label }.toTypedArray())
+                dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
+                dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
+                dataMap.putStringArray("keyboardScoreLabels", keyboard.map { it.label }.toTypedArray())
+                dataMap.putIntegerArrayList("keyboardScoreColors", ArrayList(keyboard.map { it.color.toArgb() }))
+            }.asPutDataRequest()
+            .setUrgent()
         Wearable.getDataClient(context).putDataItem(request)
     }
 

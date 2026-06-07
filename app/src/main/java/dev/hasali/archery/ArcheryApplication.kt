@@ -25,12 +25,11 @@ class ArcheryApplication : Application() {
             driver = driver,
             sessionsAdapter = Sessions.Adapter(
                 startTimeAdapter = object : ColumnAdapter<Instant, Long> {
-                    override fun decode(databaseValue: Long) =
-                        Instant.fromEpochMilliseconds(databaseValue)
+                    override fun decode(databaseValue: Long) = Instant.fromEpochMilliseconds(databaseValue)
 
                     override fun encode(value: Instant) = value.toEpochMilliseconds()
-                }
-            )
+                },
+            ),
         )
     }
 

@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -78,24 +77,27 @@ class MainActivity : ComponentActivity() {
 fun WearApp() {
     val context = LocalContext.current
     val client = remember { PhoneSessionClient(context) }
-    val observation by client.observeSession()
+    val observation by client
+        .observeSession()
         .collectAsState(initial = WearSessionObservation.Loading)
 
     AndroidTheme {
         AppScaffold {
             when (val obs = observation) {
                 WearSessionObservation.Loading -> {}
-                WearSessionObservation.Inactive -> Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Text("No session active")
-                }
-                is WearSessionObservation.Active -> ScoringScreen(
-                    state = obs.state,
-                    onScoreTapped = { score -> client.addScore(obs.state.sessionId, score.id) },
-                    onBackspaceTapped = { client.deleteLastScore(obs.state.sessionId) },
-                )
+                WearSessionObservation.Inactive ->
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Text("No session active")
+                    }
+                is WearSessionObservation.Active ->
+                    ScoringScreen(
+                        state = obs.state,
+                        onScoreTapped = { score -> client.addScore(obs.state.sessionId, score.id) },
+                        onBackspaceTapped = { client.deleteLastScore(obs.state.sessionId) },
+                    )
             }
         }
     }
@@ -107,16 +109,17 @@ private fun ScoringScreen(
     onScoreTapped: (WearScore) -> Unit,
     onBackspaceTapped: () -> Unit,
 ) {
-    val screenWidthAtOffset = @Composable { offset: Dp ->
-        val screenHeight = LocalConfiguration.current.screenHeightDp / 2
-        val radius = LocalConfiguration.current.smallestScreenWidthDp / 2
-        (sqrt((radius * radius) - (screenHeight - offset.value) * (screenHeight - offset.value)) * 2).dp
-    }
+    val screenWidthAtOffset =
+        @Composable { offset: Dp ->
+            val screenHeight = LocalConfiguration.current.screenHeightDp / 2
+            val radius = LocalConfiguration.current.smallestScreenWidthDp / 2
+            (sqrt((radius * radius) - (screenHeight - offset.value) * (screenHeight - offset.value)) * 2).dp
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             val offset = 32.dp
             val width = screenWidthAtOffset(offset) - 8.dp
@@ -127,19 +130,21 @@ private fun ScoringScreen(
 
             Row(
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .width(width)
-                    .height(scoreSize)
-                    .align(Alignment.CenterHorizontally),
+                modifier =
+                    Modifier
+                        .width(width)
+                        .height(scoreSize)
+                        .align(Alignment.CenterHorizontally),
             ) {
                 for (score in state.endScores) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .padding(horizontal = 1.dp)
-                            .size(scoreSize)
-                            .clip(CircleShape)
-                            .background(score.color)
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 1.dp)
+                                .size(scoreSize)
+                                .clip(CircleShape)
+                                .background(score.color),
                     ) {
                         BasicText(
                             text = score.label,
@@ -157,9 +162,10 @@ private fun ScoringScreen(
             val mainWidth = screenWidthAtOffset(minOffset.dp)
 
             BoxWithConstraints(
-                modifier = Modifier
-                    .weight(1f)
-                    .width(mainWidth)
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .width(mainWidth),
             ) {
                 val width = constraints.maxWidth
                 val buttonWidth = with(LocalDensity.current) { (width / 4).toDp() }
@@ -175,12 +181,13 @@ private fun ScoringScreen(
                                 CompositionLocalProvider(LocalContentColor provides score.foregroundColor) {
                                     Box(
                                         contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .size(buttonWidth, buttonHeight)
-                                            .padding(2.dp)
-                                            .clip(SquircleShape())
-                                            .background(score.color)
-                                            .clickable { onScoreTapped(score) }
+                                        modifier =
+                                            Modifier
+                                                .size(buttonWidth, buttonHeight)
+                                                .padding(2.dp)
+                                                .clip(SquircleShape())
+                                                .background(score.color)
+                                                .clickable { onScoreTapped(score) },
                                     ) {
                                         val contentColor = LocalContentColor.current
                                         BasicText(
@@ -198,7 +205,7 @@ private fun ScoringScreen(
 
             Box(
                 modifier = Modifier.height(bottomHeight),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 IconButton(
                     modifier = Modifier.touchTargetAwareSize(IconButtonDefaults.SmallButtonSize),
@@ -219,7 +226,7 @@ class SquircleShape : Shape {
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
-        density: Density
+        density: Density,
     ): Outline {
         val path = Path()
         val n = 3f

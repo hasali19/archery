@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,6 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
@@ -44,8 +46,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,13 +72,17 @@ private val dateFormat = LocalDate.Format {
 }
 
 @Composable
-private fun ChoiceChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Unit) {
+private fun ChoiceChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+) {
     val leadingIcon = if (selected) {
         @Composable {
             Icon(
                 Icons.Filled.Check,
                 contentDescription = null,
-                modifier = Modifier.size(FilterChipDefaults.IconSize)
+                modifier = Modifier.size(FilterChipDefaults.IconSize),
             )
         }
     } else {
@@ -98,6 +102,7 @@ private fun ChoiceChip(selected: Boolean, onClick: () -> Unit, label: @Composabl
 fun SessionsScreen(
     viewModel: SessionsViewModel,
     onNavigateToSession: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -152,6 +157,7 @@ fun SessionsScreen(
                 Icon(Icons.Filled.Add, contentDescription = "New Session")
             }
         },
+        modifier = modifier,
     ) { innerPadding ->
         if (uiState.isLoading) {
             CircularProgressIndicator(

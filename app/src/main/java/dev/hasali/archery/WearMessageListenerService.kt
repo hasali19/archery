@@ -7,7 +7,6 @@ import kotlinx.coroutines.runBlocking
 import java.nio.ByteBuffer
 
 class WearMessageListenerService : WearableListenerService() {
-
     private lateinit var sessionRepository: SessionRepository
 
     override fun onCreate() {
@@ -15,22 +14,23 @@ class WearMessageListenerService : WearableListenerService() {
         sessionRepository = (application as ArcheryApplication).sessionRepository
     }
 
-    override fun onMessageReceived(messageEvent: MessageEvent) = runBlocking {
-        val buffer = ByteBuffer.wrap(messageEvent.data)
-        val sessionId = buffer.int
+    override fun onMessageReceived(messageEvent: MessageEvent) =
+        runBlocking {
+            val buffer = ByteBuffer.wrap(messageEvent.data)
+            val sessionId = buffer.int
 
-        when (messageEvent.path) {
-            "/score/add" -> {
-                val scoreId = buffer.int
-                val session = sessionRepository.getSession(sessionId)
-                sessionRepository.insertScore(sessionId, session.scores.size, scoreId)
-            }
-            "/score/delete-last" -> {
-                val session = sessionRepository.getSession(sessionId)
-                if (session.scores.isNotEmpty()) {
-                    sessionRepository.deleteScore(sessionId, session.scores.size - 1)
+            when (messageEvent.path) {
+                "/score/add" -> {
+                    val scoreId = buffer.int
+                    val session = sessionRepository.getSession(sessionId)
+                    sessionRepository.insertScore(sessionId, session.scores.size, scoreId)
+                }
+                "/score/delete-last" -> {
+                    val session = sessionRepository.getSession(sessionId)
+                    if (session.scores.isNotEmpty()) {
+                        sessionRepository.deleteScore(sessionId, session.scores.size - 1)
+                    }
                 }
             }
         }
-    }
 }

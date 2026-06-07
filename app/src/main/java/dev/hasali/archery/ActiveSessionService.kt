@@ -23,7 +23,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class ActiveSessionService : Service() {
-
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private lateinit var sessionRepository: SessionRepository
@@ -36,30 +35,36 @@ class ActiveSessionService : Service() {
         wearPublisher = WearSessionPublisher(this)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         val sessionId = intent!!.getIntExtra("sessionId", 0)
 
-        val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        } else {
-            0
-        }
+        val foregroundServiceType =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                0
+            }
 
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
             buildNotification(sessionId),
-            foregroundServiceType
+            foregroundServiceType,
         )
 
         val notificationManager = NotificationManagerCompat.from(this)
 
         serviceScope.launch {
-            sessionRepository.watchSession(sessionId)
+            sessionRepository
+                .watchSession(sessionId)
                 .collect { session ->
                     if (ActivityCompat.checkSelfPermission(
                             this@ActiveSessionService,
-                            Manifest.permission.POST_NOTIFICATIONS
+                            Manifest.permission.POST_NOTIFICATIONS,
                         ) == PackageManager.PERMISSION_GRANTED
                     ) {
                         notificationManager.notify(NOTIFICATION_ID, buildNotification(sessionId, session))
@@ -90,20 +95,24 @@ class ActiveSessionService : Service() {
         )
     }
 
-    private fun buildNotification(sessionId: Int): Notification {
-        return NotificationCompat.Builder(this, NotificationChannels.SESSION)
+    private fun buildNotification(sessionId: Int): Notification =
+        NotificationCompat
+            .Builder(this, NotificationChannels.SESSION)
             .setContentTitle("Active Session")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setSilent(true)
             .setContentIntent(sessionPendingIntent(sessionId))
             .build()
-    }
 
-    private fun buildNotification(sessionId: Int, session: Session): Notification {
+    private fun buildNotification(
+        sessionId: Int,
+        session: Session,
+    ): Notification {
         val total = session.scores.sumOf { it.value }
         val average = if (session.scores.isEmpty()) 0.0 else total.toDouble() / session.scores.size
 
-        return NotificationCompat.Builder(this, NotificationChannels.SESSION)
+        return NotificationCompat
+            .Builder(this, NotificationChannels.SESSION)
             .setContentTitle(session.roundDetails.displayName)
             .setContentText("Total: $total\tAverage: ${"%.2f".format(average)}")
             .setSmallIcon(R.drawable.ic_launcher_foreground)

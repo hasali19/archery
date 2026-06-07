@@ -30,4 +30,7 @@ data class RoundDistance(
 
 enum class DistanceUnit { Metres, Yards }
 
-data class DistanceValue(val value: Int, val unit: DistanceUnit)
+data class DistanceValue(
+    val value: Int,
+    val unit: DistanceUnit,
+)
