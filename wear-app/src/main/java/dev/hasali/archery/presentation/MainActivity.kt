@@ -28,21 +28,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -51,7 +46,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButton
@@ -60,9 +54,6 @@ import androidx.wear.compose.material3.LocalContentColor
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.touchTargetAwareSize
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
-import com.google.android.gms.wearable.DataClient
-import com.google.android.gms.wearable.DataEvent
-import com.google.android.gms.wearable.Wearable
 import dev.hasali.archery.presentation.theme.AndroidTheme
 import kotlin.math.PI
 import kotlin.math.abs
@@ -85,188 +76,146 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WearApp() {
     val context = LocalContext.current
-    var isSessionActive by remember { mutableStateOf<Boolean?>(null) }
-
-    DisposableEffect(Unit) {
-        val dataClient = Wearable.getDataClient(context)
-        val listener = DataClient.OnDataChangedListener { events ->
-            for (event in events) {
-                if (event.dataItem.uri.path == "/active-session") {
-                    isSessionActive = event.type != DataEvent.TYPE_DELETED
-                }
-            }
-        }
-        dataClient.addListener(listener)
-        dataClient
-            .getDataItems("wear://*/active-session".toUri())
-            .addOnSuccessListener { items ->
-                isSessionActive = items.count > 0
-                items.release()
-            }
-        onDispose {
-            dataClient.removeListener(listener)
-        }
-    }
+    val client = remember { ActiveSessionClient(context) }
+    val sessionState by client
+        .observeSession()
+        .collectAsState(initial = ArcherySessionState.Loading)
 
     AndroidTheme {
         AppScaffold {
-            when (isSessionActive) {
-                null -> {}
-                false -> Box(
-                    contentAlignment = Alignment.Center,
+            when (val state = sessionState) {
+                ArcherySessionState.Loading -> {}
+                ArcherySessionState.Inactive ->
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Text("No session active")
+                    }
+                is ArcherySessionState.Active ->
+                    ScoringScreen(
+                        session = state.session,
+                        onScoreTapped = { score -> client.addScore(state.session.sessionId, score.id) },
+                        onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
+                    )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoringScreen(
+    session: ArcherySession,
+    onScoreTapped: (ArrowScore) -> Unit,
+    onBackspaceTapped: () -> Unit,
+) {
+    val screenWidthAtOffset =
+        @Composable { offset: Dp ->
+            val screenHeight = LocalConfiguration.current.screenHeightDp / 2
+            val radius = LocalConfiguration.current.smallestScreenWidthDp / 2
+            (sqrt((radius * radius) - (screenHeight - offset.value) * (screenHeight - offset.value)) * 2).dp
+        }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            val offset = 32.dp
+            val width = screenWidthAtOffset(offset) - 8.dp
+
+            Spacer(Modifier.height(offset))
+
+            val scoreSize = width / 6 - 2.dp
+
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier =
+                    Modifier
+                        .width(width)
+                        .height(scoreSize)
+                        .align(Alignment.CenterHorizontally),
+            ) {
+                for (score in session.endScores) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 1.dp)
+                                .size(scoreSize)
+                                .clip(CircleShape)
+                                .background(score.color),
+                    ) {
+                        BasicText(
+                            text = score.label,
+                            color = { score.foregroundColor },
+                            autoSize = TextAutoSize.StepBased(maxFontSize = 14.sp),
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            val bottomHeight = 48.dp
+            val minOffset = min(offset.value + scoreSize.value + 4, bottomHeight.value)
+            val mainWidth = screenWidthAtOffset(minOffset.dp)
+
+            BoxWithConstraints(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .width(mainWidth),
+            ) {
+                val width = constraints.maxWidth
+                val buttonWidth = with(LocalDensity.current) { (width / 4).toDp() }
+                val buttonHeight = with(LocalDensity.current) { (constraints.maxHeight / 3).toDp() }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    Text("No session active")
-                }
-
-                true -> {
-                    data class Score(
-                        val label: String,
-                        val color: Color,
-                    ) {
-                        val foregroundColor: Color
-                            get() = if (color.luminance() > 0.5) {
-                                Color.Black
-                            } else {
-                                Color.White
-                            }
-                    }
-
-                    val possibleScores = listOf(
-                        Score("X", Color(0xFFFFEB3B)),
-                        Score("10", Color(0xFFFFEB3B)),
-                        Score("9", Color(0xFFFFEB3B)),
-                        Score("8", Color(0xFFF44336)),
-                        Score("7", Color(0xFFF44336)),
-                        Score("6", Color(0xFF2196F3)),
-                        Score("5", Color(0xFF2196F3)),
-                        Score("4", Color(0xFF202020)),
-                        Score("3", Color(0xFF202020)),
-                        Score("2", Color.White),
-                        Score("1", Color.White),
-                        Score("M", Color(0xFF4CAF50)),
-                    )
-
-                    val scores = remember { mutableStateListOf<Score>() }
-
-                    val screenWidthAtOffset = @Composable { offset: Dp ->
-                        val screenHeight = LocalConfiguration.current.screenHeightDp / 2
-                        val radius = LocalConfiguration.current.smallestScreenWidthDp / 2
-                        (sqrt((radius * radius) - (screenHeight - offset.value) * (screenHeight - offset.value)) * 2).dp
-                    }
-
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            val offset = 32.dp
-                            val width = screenWidthAtOffset(offset) - 8.dp
-
-                            Spacer(Modifier.height(offset))
-
-                            val scoreSize = width / 6 - 2.dp
-
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .width(width)
-                                    .height(scoreSize)
-                                    .align(Alignment.CenterHorizontally),
-                            ) {
-                                for (score in scores) {
+                    for (scoresRow in session.keyboardScores.chunked(4)) {
+                        Row {
+                            for (score in scoresRow) {
+                                CompositionLocalProvider(LocalContentColor provides score.foregroundColor) {
                                     Box(
                                         contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .padding(horizontal = 1.dp)
-                                            .size(scoreSize)
-                                            .clip(CircleShape)
-                                            .background(score.color),
+                                        modifier =
+                                            Modifier
+                                                .size(buttonWidth, buttonHeight)
+                                                .padding(2.dp)
+                                                .clip(SquircleShape())
+                                                .background(score.color)
+                                                .clickable { onScoreTapped(score) },
                                     ) {
+                                        val contentColor = LocalContentColor.current
                                         BasicText(
                                             text = score.label,
-                                            color = { score.foregroundColor },
-                                            autoSize = TextAutoSize.StepBased(maxFontSize = 14.sp),
+                                            color = { contentColor },
+                                            autoSize = TextAutoSize.StepBased(maxFontSize = 18.sp),
                                         )
                                     }
                                 }
                             }
-
-                            Spacer(Modifier.height(4.dp))
-
-                            val bottomHeight = 48.dp
-                            val minOffset =
-                                min(offset.value + scoreSize.value + 4, bottomHeight.value)
-                            val mainWidth = screenWidthAtOffset(minOffset.dp)
-
-                            BoxWithConstraints(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .width(mainWidth),
-                            ) {
-                                val width = constraints.maxWidth
-                                val buttonWidth = with(LocalDensity.current) {
-                                    (width / 4).toDp()
-                                }
-                                val buttonHeight = with(LocalDensity.current) {
-                                    (constraints.maxHeight / 3).toDp()
-                                }
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Bottom,
-                                    modifier = Modifier.fillMaxSize(),
-                                ) {
-                                    for (scoresRow in possibleScores.chunked(4)) {
-                                        Row {
-                                            for (score in scoresRow) {
-                                                CompositionLocalProvider(LocalContentColor provides score.foregroundColor) {
-                                                    Box(
-                                                        contentAlignment = Alignment.Center,
-                                                        modifier = Modifier
-                                                            .size(buttonWidth, buttonHeight)
-                                                            .padding(2.dp)
-                                                            .clip(
-                                                                SquircleShape(),
-                                                            ).background(score.color)
-                                                            .clickable {
-                                                                if (scores.size < 6) {
-                                                                    scores.add(score)
-                                                                }
-                                                            },
-                                                    ) {
-                                                        val contentColor = LocalContentColor.current
-                                                        BasicText(
-                                                            text = score.label,
-                                                            color = { contentColor },
-                                                            autoSize = TextAutoSize.StepBased(
-                                                                maxFontSize = 18.sp,
-                                                            ),
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier.height(bottomHeight),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                IconButton(
-                                    modifier = Modifier.touchTargetAwareSize(IconButtonDefaults.SmallButtonSize),
-                                    onClick = { scores.removeLastOrNull() },
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Default.Backspace,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
-                                    )
-                                }
-                            }
                         }
                     }
+                }
+            }
+
+            Box(
+                modifier = Modifier.height(bottomHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                IconButton(
+                    modifier = Modifier.touchTargetAwareSize(IconButtonDefaults.SmallButtonSize),
+                    onClick = onBackspaceTapped,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Default.Backspace,
+                        contentDescription = null,
+                        modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
+                    )
                 }
             }
         }

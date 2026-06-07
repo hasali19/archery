@@ -14,8 +14,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.net.toUri
-import com.google.android.gms.wearable.PutDataMapRequest
-import com.google.android.gms.wearable.Wearable
 import dev.hasali.archery.data.Session
 import dev.hasali.archery.repository.SessionRepository
 import kotlinx.coroutines.CoroutineScope
@@ -28,12 +26,13 @@ class ActiveSessionService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private lateinit var sessionRepository: SessionRepository
+    private lateinit var wearPublisher: WearSessionPublisher
 
     override fun onCreate() {
         super.onCreate()
-
         val application = this.application as ArcheryApplication
         sessionRepository = application.sessionRepository
+        wearPublisher = WearSessionPublisher(this)
     }
 
     override fun onStartCommand(
@@ -43,11 +42,12 @@ class ActiveSessionService : Service() {
     ): Int {
         val sessionId = intent!!.getIntExtra("sessionId", 0)
 
-        val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        } else {
-            0
-        }
+        val foregroundServiceType =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                0
+            }
 
         ServiceCompat.startForeground(
             this,
@@ -56,29 +56,20 @@ class ActiveSessionService : Service() {
             foregroundServiceType,
         )
 
-        val request = PutDataMapRequest
-            .create("/active-session")
-            .apply {
-                dataMap.putInt("sessionId", sessionId)
-            }.asPutDataRequest()
-            .setUrgent()
-        Wearable.getDataClient(this).putDataItem(request)
-
         val notificationManager = NotificationManagerCompat.from(this)
 
         serviceScope.launch {
-            if (ActivityCompat.checkSelfPermission(
-                    this@ActiveSessionService,
-                    Manifest.permission.POST_NOTIFICATIONS,
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return@launch
-            }
-
             sessionRepository
                 .watchSession(sessionId)
-                .collect {
-                    notificationManager.notify(NOTIFICATION_ID, buildNotification(sessionId, it))
+                .collect { session ->
+                    if (ActivityCompat.checkSelfPermission(
+                            this@ActiveSessionService,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationManager.notify(NOTIFICATION_ID, buildNotification(sessionId, session))
+                    }
+                    wearPublisher.publish(sessionId, session)
                 }
         }
 
@@ -86,9 +77,7 @@ class ActiveSessionService : Service() {
     }
 
     override fun onDestroy() {
-        Wearable
-            .getDataClient(this)
-            .deleteDataItems("wear://*/active-session".toUri())
+        wearPublisher.clear()
         serviceScope.cancel()
         super.onDestroy()
     }

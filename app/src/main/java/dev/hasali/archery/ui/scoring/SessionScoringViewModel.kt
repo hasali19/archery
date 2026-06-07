@@ -27,17 +27,18 @@ class SessionScoringViewModel(
 
     init {
         viewModelScope.launch {
-            val session = repo.getSession(sessionId)
-            _uiState.update {
-                it.copy(session = session, scores = session.scores, isLoading = false)
-            }
+            repo
+                .watchSession(sessionId)
+                .collect { session ->
+                    _uiState.update {
+                        it.copy(session = session, scores = session.scores, isLoading = false)
+                    }
+                }
         }
     }
 
     fun addScore(score: Score) {
-        val currentScores = _uiState.value.scores
-        val newIndex = currentScores.size
-        _uiState.update { it.copy(scores = currentScores + score) }
+        val newIndex = _uiState.value.scores.size
         viewModelScope.launch {
             repo.insertScore(sessionId, newIndex, score.id)
         }
@@ -46,17 +47,12 @@ class SessionScoringViewModel(
     fun removeLastScore() {
         val current = _uiState.value.scores
         if (current.isEmpty()) return
-        val lastIndex = current.size - 1
-        _uiState.update { it.copy(scores = current.dropLast(1)) }
         viewModelScope.launch {
-            repo.deleteScore(sessionId, lastIndex)
+            repo.deleteScore(sessionId, current.size - 1)
         }
     }
 
     fun updateStartTime(startTime: Instant) {
-        _uiState.update { state ->
-            state.copy(session = state.session?.copy(startTime = startTime))
-        }
         viewModelScope.launch {
             repo.updateStartTime(sessionId, startTime)
         }
