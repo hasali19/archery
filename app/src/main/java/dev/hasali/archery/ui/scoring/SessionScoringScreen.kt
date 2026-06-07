@@ -50,8 +50,16 @@ import kotlin.time.Instant
 
 // Sealed items for the flat scoresheet list
 private sealed interface ScoreSheetItem {
-    data class DistanceHeader(val label: String, val total: Int) : ScoreSheetItem
-    data class EndRow(val endNumber: Int, val scores: List<Score>) : ScoreSheetItem
+    data class DistanceHeader(
+        val label: String,
+        val total: Int,
+    ) : ScoreSheetItem
+
+    data class EndRow(
+        val endNumber: Int,
+        val scores: List<Score>,
+    ) : ScoreSheetItem
+
     data object Divider : ScoreSheetItem
 }
 
@@ -126,6 +134,7 @@ private fun targetItemIndexForArrow(
 fun SessionScoringScreen(
     viewModel: SessionScoringViewModel,
     onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val session = uiState.session
@@ -149,8 +158,8 @@ fun SessionScoringScreen(
             val layoutInfo = listState.layoutInfo
             val targetItem = layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIdx }
             val isFullyVisible = targetItem != null &&
-                    targetItem.offset >= layoutInfo.viewportStartOffset &&
-                    targetItem.offset + targetItem.size <= layoutInfo.viewportEndOffset
+                targetItem.offset >= layoutInfo.viewportStartOffset &&
+                targetItem.offset + targetItem.size <= layoutInfo.viewportEndOffset
             if (!isFullyVisible) {
                 listState.animateScrollToItem(targetIdx)
             }
@@ -200,6 +209,7 @@ fun SessionScoringScreen(
                 },
             )
         },
+        modifier = modifier,
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -233,8 +243,8 @@ fun SessionScoringScreen(
             if (session != null) {
                 ScoreKeyboard(
                     scoringSystem = session.roundDetails.scoringSystem,
-                    onScorePressed = viewModel::addScore,
-                    onBackspacePressed = viewModel::removeLastScore,
+                    onScorePress = viewModel::addScore,
+                    onBackspacePress = viewModel::removeLastScore,
                     modifier = Modifier.padding(8.dp),
                 )
             }

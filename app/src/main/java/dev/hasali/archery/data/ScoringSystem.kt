@@ -19,6 +19,7 @@ data class ScoringSystem(
     val scores: List<Score>,
 ) {
     private val scoresById = scores.associateBy { it.id }
+
     fun get(id: Int): Score = scoresById.getValue(id)
 }
 

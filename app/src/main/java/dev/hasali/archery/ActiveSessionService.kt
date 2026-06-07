@@ -7,7 +7,6 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.ActivityCompat
@@ -26,7 +25,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class ActiveSessionService : Service() {
-
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private lateinit var sessionRepository: SessionRepository
@@ -38,7 +36,11 @@ class ActiveSessionService : Service() {
         sessionRepository = application.sessionRepository
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         val sessionId = intent!!.getIntExtra("sessionId", 0)
 
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -51,12 +53,15 @@ class ActiveSessionService : Service() {
             this,
             NOTIFICATION_ID,
             buildNotification(sessionId),
-            foregroundServiceType
+            foregroundServiceType,
         )
 
-        val request = PutDataMapRequest.create("/active-session").apply {
-            dataMap.putInt("sessionId", sessionId)
-        }.asPutDataRequest().setUrgent()
+        val request = PutDataMapRequest
+            .create("/active-session")
+            .apply {
+                dataMap.putInt("sessionId", sessionId)
+            }.asPutDataRequest()
+            .setUrgent()
         Wearable.getDataClient(this).putDataItem(request)
 
         val notificationManager = NotificationManagerCompat.from(this)
@@ -64,13 +69,14 @@ class ActiveSessionService : Service() {
         serviceScope.launch {
             if (ActivityCompat.checkSelfPermission(
                     this@ActiveSessionService,
-                    Manifest.permission.POST_NOTIFICATIONS
+                    Manifest.permission.POST_NOTIFICATIONS,
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 return@launch
             }
 
-            sessionRepository.watchSession(sessionId)
+            sessionRepository
+                .watchSession(sessionId)
                 .collect {
                     notificationManager.notify(NOTIFICATION_ID, buildNotification(sessionId, it))
                 }
@@ -80,15 +86,14 @@ class ActiveSessionService : Service() {
     }
 
     override fun onDestroy() {
-        Wearable.getDataClient(this)
+        Wearable
+            .getDataClient(this)
             .deleteDataItems("wear://*/active-session".toUri())
         serviceScope.cancel()
         super.onDestroy()
     }
 
-    override fun onBind(p0: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(p0: Intent?): IBinder? = null
 
     private fun sessionPendingIntent(sessionId: Int): PendingIntent {
         val deepLinkUri = "archery://session/$sessionId".toUri()
@@ -101,20 +106,24 @@ class ActiveSessionService : Service() {
         )
     }
 
-    private fun buildNotification(sessionId: Int): Notification {
-        return NotificationCompat.Builder(this, NotificationChannels.SESSION)
+    private fun buildNotification(sessionId: Int): Notification =
+        NotificationCompat
+            .Builder(this, NotificationChannels.SESSION)
             .setContentTitle("Active Session")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setSilent(true)
             .setContentIntent(sessionPendingIntent(sessionId))
             .build()
-    }
 
-    private fun buildNotification(sessionId: Int, session: Session): Notification {
+    private fun buildNotification(
+        sessionId: Int,
+        session: Session,
+    ): Notification {
         val total = session.scores.sumOf { it.value }
         val average = if (session.scores.isEmpty()) 0.0 else total.toDouble() / session.scores.size
 
-        return NotificationCompat.Builder(this, NotificationChannels.SESSION)
+        return NotificationCompat
+            .Builder(this, NotificationChannels.SESSION)
             .setContentTitle(session.roundDetails.displayName)
             .setContentText("Total: $total\tAverage: ${"%.2f".format(average)}")
             .setSmallIcon(R.drawable.ic_launcher_foreground)

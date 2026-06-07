@@ -18,9 +18,11 @@ data class SessionsUiState(
     val isLoading: Boolean = true,
 )
 
-class SessionsViewModel(private val repo: SessionRepository) : ViewModel() {
-
-    val uiState = repo.watchSessions()
+class SessionsViewModel(
+    private val repo: SessionRepository,
+) : ViewModel() {
+    val uiState = repo
+        .watchSessions()
         .map { buildUiState(it) }
         .stateIn(
             scope = viewModelScope,
@@ -61,7 +63,9 @@ class SessionsViewModel(private val repo: SessionRepository) : ViewModel() {
     }
 }
 
-class SessionsViewModelFactory(private val repo: SessionRepository) : ViewModelProvider.Factory {
+class SessionsViewModelFactory(
+    private val repo: SessionRepository,
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = SessionsViewModel(repo) as T
 }

@@ -22,7 +22,6 @@ class SessionScoringViewModel(
     private val sessionId: Int,
     private val repo: SessionRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(ScoringUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -76,6 +75,5 @@ class SessionScoringViewModelFactory(
     private val repo: SessionRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SessionScoringViewModel(sessionId, repo) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = SessionScoringViewModel(sessionId, repo) as T
 }

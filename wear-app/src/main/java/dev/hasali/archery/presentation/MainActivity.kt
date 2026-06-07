@@ -5,7 +5,6 @@
 
 package dev.hasali.archery.presentation
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -52,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButton
@@ -72,7 +72,6 @@ import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
-import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,7 +97,8 @@ fun WearApp() {
             }
         }
         dataClient.addListener(listener)
-        dataClient.getDataItems("wear://*/active-session".toUri())
+        dataClient
+            .getDataItems("wear://*/active-session".toUri())
             .addOnSuccessListener { items ->
                 isSessionActive = items.count > 0
                 items.release()
@@ -158,7 +158,7 @@ fun WearApp() {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             val offset = 32.dp
                             val width = screenWidthAtOffset(offset) - 8.dp
@@ -181,7 +181,7 @@ fun WearApp() {
                                             .padding(horizontal = 1.dp)
                                             .size(scoreSize)
                                             .clip(CircleShape)
-                                            .background(score.color)
+                                            .background(score.color),
                                     ) {
                                         BasicText(
                                             text = score.label,
@@ -202,7 +202,7 @@ fun WearApp() {
                             BoxWithConstraints(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .width(mainWidth)
+                                    .width(mainWidth),
                             ) {
                                 val width = constraints.maxWidth
                                 val buttonWidth = with(LocalDensity.current) {
@@ -226,21 +226,20 @@ fun WearApp() {
                                                             .size(buttonWidth, buttonHeight)
                                                             .padding(2.dp)
                                                             .clip(
-                                                                SquircleShape()
-                                                            )
-                                                            .background(score.color)
+                                                                SquircleShape(),
+                                                            ).background(score.color)
                                                             .clickable {
                                                                 if (scores.size < 6) {
                                                                     scores.add(score)
                                                                 }
-                                                            }
+                                                            },
                                                     ) {
                                                         val contentColor = LocalContentColor.current
                                                         BasicText(
                                                             text = score.label,
                                                             color = { contentColor },
                                                             autoSize = TextAutoSize.StepBased(
-                                                                maxFontSize = 18.sp
+                                                                maxFontSize = 18.sp,
                                                             ),
                                                         )
                                                     }
@@ -253,7 +252,7 @@ fun WearApp() {
 
                             Box(
                                 modifier = Modifier.height(bottomHeight),
-                                contentAlignment = Alignment.Center
+                                contentAlignment = Alignment.Center,
                             ) {
                                 IconButton(
                                     modifier = Modifier.touchTargetAwareSize(IconButtonDefaults.SmallButtonSize),
@@ -268,7 +267,6 @@ fun WearApp() {
                             }
                         }
                     }
-
                 }
             }
         }
@@ -279,7 +277,7 @@ class SquircleShape : Shape {
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
-        density: Density
+        density: Density,
     ): Outline {
         val path = Path()
         val n = 3f

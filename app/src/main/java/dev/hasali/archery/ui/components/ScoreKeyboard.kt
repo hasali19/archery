@@ -23,8 +23,8 @@ import dev.hasali.archery.data.ScoringSystem
 @Composable
 fun ScoreKeyboard(
     scoringSystem: ScoringSystem,
-    onScorePressed: (Score) -> Unit,
-    onBackspacePressed: () -> Unit,
+    onScorePress: (Score) -> Unit,
+    onBackspacePress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -42,7 +42,7 @@ fun ScoreKeyboard(
                             Button(
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
-                                    onScorePressed(score)
+                                    onScorePress(score)
                                 },
                                 modifier = Modifier.width(buttonWidth).padding(horizontal = 4.dp),
                                 colors = ButtonDefaults.buttonColors(
@@ -60,7 +60,7 @@ fun ScoreKeyboard(
             Button(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onBackspacePressed()
+                    onBackspacePress()
                 },
                 modifier = Modifier.width(buttonWidth).padding(horizontal = 4.dp),
             ) {
