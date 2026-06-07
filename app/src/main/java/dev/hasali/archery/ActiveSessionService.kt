@@ -7,17 +7,13 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.net.toUri
-import com.google.android.gms.wearable.PutDataMapRequest
-import com.google.android.gms.wearable.Wearable
 import dev.hasali.archery.data.Session
 import dev.hasali.archery.repository.SessionRepository
 import kotlinx.coroutines.CoroutineScope
@@ -31,12 +27,13 @@ class ActiveSessionService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private lateinit var sessionRepository: SessionRepository
+    private lateinit var wearPublisher: WearSessionPublisher
 
     override fun onCreate() {
         super.onCreate()
-
         val application = this.application as ArcheryApplication
         sessionRepository = application.sessionRepository
+        wearPublisher = WearSessionPublisher(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -67,7 +64,7 @@ class ActiveSessionService : Service() {
                     ) {
                         notificationManager.notify(NOTIFICATION_ID, buildNotification(sessionId, session))
                     }
-                    publishSessionScores(sessionId, session)
+                    wearPublisher.publish(sessionId, session)
                 }
         }
 
@@ -75,15 +72,12 @@ class ActiveSessionService : Service() {
     }
 
     override fun onDestroy() {
-        Wearable.getDataClient(this)
-            .deleteDataItems("wear://*/active-session".toUri())
+        wearPublisher.clear()
         serviceScope.cancel()
         super.onDestroy()
     }
 
-    override fun onBind(p0: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(p0: Intent?): IBinder? = null
 
     private fun sessionPendingIntent(sessionId: Int): PendingIntent {
         val deepLinkUri = "archery://session/$sessionId".toUri()
@@ -116,36 +110,6 @@ class ActiveSessionService : Service() {
             .setSilent(true)
             .setContentIntent(sessionPendingIntent(sessionId))
             .build()
-    }
-
-    private fun publishSessionScores(sessionId: Int, session: Session) {
-        val endScores = getCurrentEndScores(session)
-        val keyboard = session.roundDetails.scoringSystem.scores
-        val request = PutDataMapRequest.create("/active-session").apply {
-            dataMap.putInt("sessionId", sessionId)
-            dataMap.putStringArray("endScoreLabels", endScores.map { it.label }.toTypedArray())
-            dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
-            dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
-            dataMap.putStringArray("keyboardScoreLabels", keyboard.map { it.label }.toTypedArray())
-            dataMap.putIntegerArrayList("keyboardScoreColors", ArrayList(keyboard.map { it.color.toArgb() }))
-        }.asPutDataRequest().setUrgent()
-        Wearable.getDataClient(this).putDataItem(request)
-    }
-
-    private fun getCurrentEndScores(session: Session): List<dev.hasali.archery.data.Score> {
-        val totalScores = session.scores.size
-        if (totalScores == 0) return emptyList()
-
-        val distances = session.roundDetails.distances
-        val currentDistance = distances.lastOrNull { it.firstArrowIndex < totalScores }
-            ?: return emptyList()
-
-        val arrowsPerEnd = currentDistance.arrowsPerEnd
-        val scoresInDistance = totalScores - currentDistance.firstArrowIndex
-        val endIndexInDistance = (scoresInDistance - 1) / arrowsPerEnd
-        val currentEndStart = currentDistance.firstArrowIndex + endIndexInDistance * arrowsPerEnd
-
-        return session.scores.drop(currentEndStart).take(arrowsPerEnd)
     }
 
     companion object {
