@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import java.nio.ByteBuffer
 
-data class WearScore(
+data class ArrowScore(
     val id: Int,
     val label: String,
     val color: Color,
@@ -23,26 +23,26 @@ data class WearScore(
         get() = if (color.luminance() > 0.5f) Color.Black else Color.White
 }
 
-data class WearSessionState(
+data class ArcherySession(
     val sessionId: Int,
-    val endScores: List<WearScore>,
-    val keyboardScores: List<WearScore>,
+    val endScores: List<ArrowScore>,
+    val keyboardScores: List<ArrowScore>,
 )
 
-sealed interface WearSessionObservation {
-    data object Loading : WearSessionObservation
+sealed interface ArcherySessionState {
+    data object Loading : ArcherySessionState
 
-    data object Inactive : WearSessionObservation
+    data object Inactive : ArcherySessionState
 
     data class Active(
-        val state: WearSessionState,
-    ) : WearSessionObservation
+        val session: ArcherySession,
+    ) : ArcherySessionState
 }
 
-class PhoneSessionClient(
+class ActiveSessionClient(
     private val context: Context,
 ) {
-    fun observeSession(): Flow<WearSessionObservation> =
+    fun observeSession(): Flow<ArcherySessionState> =
         callbackFlow {
             val dataClient = Wearable.getDataClient(context)
             val listener = DataClient.OnDataChangedListener { events ->
@@ -50,9 +50,9 @@ class PhoneSessionClient(
                     if (event.dataItem.uri.path == "/active-session") {
                         trySend(
                             if (event.type == DataEvent.TYPE_DELETED) {
-                                WearSessionObservation.Inactive
+                                ArcherySessionState.Inactive
                             } else {
-                                WearSessionObservation.Active(parseSessionState(event.dataItem))
+                                ArcherySessionState.Active(parseSession(event.dataItem))
                             },
                         )
                     }
@@ -64,9 +64,9 @@ class PhoneSessionClient(
                 .addOnSuccessListener { items ->
                     trySend(
                         if (items.count > 0) {
-                            WearSessionObservation.Active(parseSessionState(items[0]))
+                            ArcherySessionState.Active(parseSession(items[0]))
                         } else {
-                            WearSessionObservation.Inactive
+                            ArcherySessionState.Inactive
                         },
                     )
                     items.release()
@@ -102,22 +102,22 @@ class PhoneSessionClient(
         }
     }
 
-    private fun parseSessionState(dataItem: DataItem): WearSessionState {
+    private fun parseSession(dataItem: DataItem): ArcherySession {
         val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
 
         val endLabels = dataMap.getStringArray("endScoreLabels") ?: emptyArray()
         val endColors = dataMap.getIntegerArrayList("endScoreColors") ?: arrayListOf()
         val endScores = endLabels
             .zip(endColors)
-            .map { (label, color) -> WearScore(0, label, Color(color)) }
+            .map { (label, color) -> ArrowScore(0, label, Color(color)) }
 
         val keyIds = dataMap.getIntegerArrayList("keyboardScoreIds") ?: arrayListOf()
         val keyLabels = dataMap.getStringArray("keyboardScoreLabels") ?: emptyArray()
         val keyColors = dataMap.getIntegerArrayList("keyboardScoreColors") ?: arrayListOf()
         val keyboardScores = keyIds.indices
-            .map { i -> WearScore(keyIds[i], keyLabels[i], Color(keyColors[i])) }
+            .map { i -> ArrowScore(keyIds[i], keyLabels[i], Color(keyColors[i])) }
 
-        return WearSessionState(
+        return ArcherySession(
             sessionId = dataMap.getInt("sessionId"),
             endScores = endScores,
             keyboardScores = keyboardScores,

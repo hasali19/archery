@@ -76,27 +76,27 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WearApp() {
     val context = LocalContext.current
-    val client = remember { PhoneSessionClient(context) }
-    val observation by client
+    val client = remember { ActiveSessionClient(context) }
+    val sessionState by client
         .observeSession()
-        .collectAsState(initial = WearSessionObservation.Loading)
+        .collectAsState(initial = ArcherySessionState.Loading)
 
     AndroidTheme {
         AppScaffold {
-            when (val obs = observation) {
-                WearSessionObservation.Loading -> {}
-                WearSessionObservation.Inactive ->
+            when (val state = sessionState) {
+                ArcherySessionState.Loading -> {}
+                ArcherySessionState.Inactive ->
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         Text("No session active")
                     }
-                is WearSessionObservation.Active ->
+                is ArcherySessionState.Active ->
                     ScoringScreen(
-                        state = obs.state,
-                        onScoreTapped = { score -> client.addScore(obs.state.sessionId, score.id) },
-                        onBackspaceTapped = { client.deleteLastScore(obs.state.sessionId) },
+                        session = state.session,
+                        onScoreTapped = { score -> client.addScore(state.session.sessionId, score.id) },
+                        onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
                     )
             }
         }
@@ -105,8 +105,8 @@ fun WearApp() {
 
 @Composable
 private fun ScoringScreen(
-    state: WearSessionState,
-    onScoreTapped: (WearScore) -> Unit,
+    session: ArcherySession,
+    onScoreTapped: (ArrowScore) -> Unit,
     onBackspaceTapped: () -> Unit,
 ) {
     val screenWidthAtOffset =
@@ -136,7 +136,7 @@ private fun ScoringScreen(
                         .height(scoreSize)
                         .align(Alignment.CenterHorizontally),
             ) {
-                for (score in state.endScores) {
+                for (score in session.endScores) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier =
@@ -175,7 +175,7 @@ private fun ScoringScreen(
                     verticalArrangement = Arrangement.Bottom,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    for (scoresRow in state.keyboardScores.chunked(4)) {
+                    for (scoresRow in session.keyboardScores.chunked(4)) {
                         Row {
                             for (score in scoresRow) {
                                 CompositionLocalProvider(LocalContentColor provides score.foregroundColor) {
