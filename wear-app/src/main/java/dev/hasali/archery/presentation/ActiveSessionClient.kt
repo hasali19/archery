@@ -25,6 +25,7 @@ data class ArrowScore(
 
 data class ArcherySession(
     val sessionId: Int,
+    val totalScore: Int,
     val endScores: List<ArrowScore>,
     val keyboardScores: List<ArrowScore>,
 )
@@ -119,6 +120,7 @@ class ActiveSessionClient(
 
         return ArcherySession(
             sessionId = dataMap.getInt("sessionId"),
+            totalScore = dataMap.getInt("totalScore"),
             endScores = endScores,
             keyboardScores = keyboardScores,
         )

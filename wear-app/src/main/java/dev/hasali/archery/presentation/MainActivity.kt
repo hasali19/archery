@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -66,6 +67,8 @@ import androidx.wear.compose.material3.touchTargetAwareSize
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
+import com.google.android.horologist.compose.ambient.AmbientAware
+import com.google.android.horologist.compose.ambient.AmbientState
 import dev.hasali.archery.R
 import dev.hasali.archery.presentation.theme.AndroidTheme
 import kotlin.math.PI
@@ -151,26 +154,45 @@ fun WearApp() {
         }
     }
 
-    AndroidTheme {
-        AppScaffold {
-            when (val state = sessionState) {
-                ArcherySessionState.Loading -> {}
-
-                ArcherySessionState.Inactive -> {
+    AmbientAware { ambientStateUpdate ->
+        AndroidTheme {
+            AppScaffold {
+                if (ambientStateUpdate.ambientState is AmbientState.Ambient &&
+                    sessionState is ArcherySessionState.Active
+                ) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black),
                     ) {
-                        Text("No session active")
+                        Text(
+                            text = "${(sessionState as ArcherySessionState.Active).session.totalScore}",
+                            color = Color.White,
+                            fontSize = 48.sp,
+                        )
                     }
-                }
+                } else {
+                    when (val state = sessionState) {
+                        ArcherySessionState.Loading -> {}
 
-                is ArcherySessionState.Active -> {
-                    ScoringScreen(
-                        session = state.session,
-                        onScoreTapped = { score -> client.addScore(state.session.sessionId, score.id) },
-                        onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
-                    )
+                        ArcherySessionState.Inactive -> {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                Text("No session active")
+                            }
+                        }
+
+                        is ArcherySessionState.Active -> {
+                            ScoringScreen(
+                                session = state.session,
+                                onScoreTapped = { score -> client.addScore(state.session.sessionId, score.id) },
+                                onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
+                            )
+                        }
+                    }
                 }
             }
         }
