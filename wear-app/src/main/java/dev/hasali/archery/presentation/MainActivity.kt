@@ -171,15 +171,17 @@ fun WearApp() {
                                 color = Color.White,
                                 fontSize = 48.sp,
                             )
-                            Text(
-                                text = session.name,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                            )
-                            session.currentDistance?.let { (value, unit) ->
-                                val suffix = if (unit == "Metres") "m" else "yd"
+                            session.name?.let {
                                 Text(
-                                    text = "$value$suffix",
+                                    text = it,
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                )
+                            }
+                            session.currentDistance?.let { dist ->
+                                val suffix = if (dist.unit == DistanceUnit.Metres) "m" else "yd"
+                                Text(
+                                    text = "${dist.value}$suffix",
                                     color = Color.White,
                                     fontSize = 14.sp,
                                 )

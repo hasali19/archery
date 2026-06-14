@@ -46,7 +46,7 @@ class WearSessionPublisher(
     private fun getCurrentDistance(session: Session): DistanceValue? {
         val totalScores = session.scores.size
         val distances = session.roundDetails.distances
-        return distances.lastOrNull { it.firstArrowIndex < totalScores }?.distanceValue
+        return distances.lastOrNull { it.firstArrowIndex <= totalScores }?.distanceValue
     }
 
     private fun getCurrentEndScores(session: Session): List<Score> {
