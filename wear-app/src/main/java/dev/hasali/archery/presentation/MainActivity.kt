@@ -158,17 +158,35 @@ fun WearApp() {
         AndroidTheme {
             AppScaffold {
                 if (ambientState.isAmbient && sessionState is ArcherySessionState.Active) {
+                    val session = (sessionState as ArcherySessionState.Active).session
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black),
                     ) {
-                        Text(
-                            text = "${(sessionState as ArcherySessionState.Active).session.totalScore}",
-                            color = Color.White,
-                            fontSize = 48.sp,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "${session.totalScore}",
+                                color = Color.White,
+                                fontSize = 48.sp,
+                            )
+                            session.name?.let {
+                                Text(
+                                    text = it,
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                )
+                            }
+                            session.currentDistance?.let { dist ->
+                                val suffix = if (dist.unit == DistanceUnit.Metres) "m" else "yd"
+                                Text(
+                                    text = "${dist.value}$suffix",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                )
+                            }
+                        }
                     }
                 } else {
                     when (val state = sessionState) {

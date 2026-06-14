@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.net.toUri
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import dev.hasali.archery.data.DistanceValue
 import dev.hasali.archery.data.Score
 import dev.hasali.archery.data.Session
 
@@ -22,6 +23,12 @@ class WearSessionPublisher(
             .apply {
                 dataMap.putInt("sessionId", sessionId)
                 dataMap.putInt("totalScore", session.scores.sumOf { it.value })
+                dataMap.putString("sessionName", session.roundDetails.displayName)
+                val dist = getCurrentDistance(session)
+                if (dist != null) {
+                    dataMap.putInt("currentDistanceValue", dist.value)
+                    dataMap.putString("currentDistanceUnit", dist.unit.name)
+                }
                 dataMap.putStringArray("endScoreLabels", endScores.map { it.label }.toTypedArray())
                 dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
                 dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
@@ -34,6 +41,12 @@ class WearSessionPublisher(
 
     fun clear() {
         Wearable.getDataClient(context).deleteDataItems("wear://*/active-session".toUri())
+    }
+
+    private fun getCurrentDistance(session: Session): DistanceValue? {
+        val totalScores = session.scores.size
+        val distances = session.roundDetails.distances
+        return distances.lastOrNull { it.firstArrowIndex <= totalScores }?.distanceValue
     }
 
     private fun getCurrentEndScores(session: Session): List<Score> {
