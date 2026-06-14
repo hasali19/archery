@@ -26,6 +26,8 @@ data class ArrowScore(
 data class ArcherySession(
     val sessionId: Int,
     val totalScore: Int,
+    val name: String,
+    val currentDistance: Pair<Int, String>?,
     val endScores: List<ArrowScore>,
     val keyboardScores: List<ArrowScore>,
 )
@@ -121,6 +123,10 @@ class ActiveSessionClient(
         return ArcherySession(
             sessionId = dataMap.getInt("sessionId"),
             totalScore = dataMap.getInt("totalScore"),
+            name = dataMap.getString("sessionName") ?: "",
+            currentDistance = if (dataMap.containsKey("currentDistanceValue"))
+                Pair(dataMap.getInt("currentDistanceValue"), dataMap.getString("currentDistanceUnit") ?: "Metres")
+            else null,
             endScores = endScores,
             keyboardScores = keyboardScores,
         )
