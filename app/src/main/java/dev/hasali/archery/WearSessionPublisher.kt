@@ -21,6 +21,7 @@ class WearSessionPublisher(
             .create("/active-session")
             .apply {
                 dataMap.putInt("sessionId", sessionId)
+                dataMap.putInt("totalScore", session.scores.sumOf { it.value })
                 dataMap.putStringArray("endScoreLabels", endScores.map { it.label }.toTypedArray())
                 dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
                 dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
