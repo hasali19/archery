@@ -154,12 +154,10 @@ fun WearApp() {
         }
     }
 
-    AmbientAware { ambientStateUpdate ->
+    AmbientAware { ambientState ->
         AndroidTheme {
             AppScaffold {
-                if (ambientStateUpdate.ambientState is AmbientState.Ambient &&
-                    sessionState is ArcherySessionState.Active
-                ) {
+                if (ambientState.isAmbient && sessionState is ArcherySessionState.Active) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
