@@ -31,9 +31,12 @@ class WearSessionPublisher(
                 }
                 dataMap.putStringArray("endScoreLabels", endScores.map { it.label }.toTypedArray())
                 dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
+                dataMap.putIntegerArrayList("endScoreValues", ArrayList(endScores.map { it.value }))
+                dataMap.putInt("currentArrowsPerEnd", getCurrentArrowsPerEnd(session))
                 dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
                 dataMap.putStringArray("keyboardScoreLabels", keyboard.map { it.label }.toTypedArray())
                 dataMap.putIntegerArrayList("keyboardScoreColors", ArrayList(keyboard.map { it.color.toArgb() }))
+                dataMap.putIntegerArrayList("keyboardScoreValues", ArrayList(keyboard.map { it.value }))
             }.asPutDataRequest()
             .setUrgent()
         Wearable.getDataClient(context).putDataItem(request)
@@ -41,6 +44,12 @@ class WearSessionPublisher(
 
     fun clear() {
         Wearable.getDataClient(context).deleteDataItems("wear://*/active-session".toUri())
+    }
+
+    private fun getCurrentArrowsPerEnd(session: Session): Int {
+        val totalScores = session.scores.size
+        val distances = session.roundDetails.distances
+        return distances.lastOrNull { it.firstArrowIndex <= totalScores }?.arrowsPerEnd ?: 0
     }
 
     private fun getCurrentDistance(session: Session): DistanceValue? {

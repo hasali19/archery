@@ -9,9 +9,9 @@ import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataItem
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.nio.ByteBuffer
 
 enum class DistanceUnit { Metres, Yards }
@@ -20,6 +20,7 @@ data class CurrentDistance(val value: Int, val unit: DistanceUnit)
 
 data class ArrowScore(
     val id: Int,
+    val value: Int,
     val label: String,
     val color: Color,
 ) {
@@ -34,6 +35,7 @@ data class ArcherySession(
     val currentDistance: CurrentDistance?,
     val endScores: List<ArrowScore>,
     val keyboardScores: List<ArrowScore>,
+    val arrowsPerEnd: Int,
 )
 
 sealed interface ArcherySessionState {
@@ -49,53 +51,83 @@ sealed interface ArcherySessionState {
 class ActiveSessionClient(
     private val context: Context,
 ) {
-    fun observeSession(): Flow<ArcherySessionState> =
-        callbackFlow {
-            val dataClient = Wearable.getDataClient(context)
-            val listener = DataClient.OnDataChangedListener { events ->
-                for (event in events) {
-                    if (event.dataItem.uri.path == "/active-session") {
-                        trySend(
-                            if (event.type == DataEvent.TYPE_DELETED) {
-                                ArcherySessionState.Inactive
-                            } else {
-                                ArcherySessionState.Active(parseSession(event.dataItem))
-                            },
-                        )
+    private val _sessionState = MutableStateFlow<ArcherySessionState>(ArcherySessionState.Loading)
+    val sessionState: StateFlow<ArcherySessionState> = _sessionState.asStateFlow()
+
+    private var dataListener: DataClient.OnDataChangedListener? = null
+
+    fun startListening() {
+        val dataClient = Wearable.getDataClient(context)
+        val listener = DataClient.OnDataChangedListener { events ->
+            for (event in events) {
+                if (event.dataItem.uri.path == "/active-session") {
+                    _sessionState.value = if (event.type == DataEvent.TYPE_DELETED) {
+                        ArcherySessionState.Inactive
+                    } else {
+                        ArcherySessionState.Active(parseSession(event.dataItem))
                     }
                 }
             }
-            dataClient.addListener(listener)
-            dataClient
-                .getDataItems("wear://*/active-session".toUri())
-                .addOnSuccessListener { items ->
-                    trySend(
-                        if (items.count > 0) {
-                            ArcherySessionState.Active(parseSession(items[0]))
-                        } else {
-                            ArcherySessionState.Inactive
-                        },
-                    )
-                    items.release()
-                }
-            awaitClose { dataClient.removeListener(listener) }
         }
+        dataListener = listener
+        dataClient.addListener(listener)
+        dataClient
+            .getDataItems("wear://*/active-session".toUri())
+            .addOnSuccessListener { items ->
+                _sessionState.value = if (items.count > 0) {
+                    ArcherySessionState.Active(parseSession(items[0]))
+                } else {
+                    ArcherySessionState.Inactive
+                }
+                items.release()
+            }
+    }
 
-    fun addScore(
-        sessionId: Int,
-        scoreId: Int,
-    ) {
+    fun stopListening() {
+        dataListener?.let { Wearable.getDataClient(context).removeListener(it) }
+        dataListener = null
+    }
+
+    fun addScore(sessionId: Int, score: ArrowScore) {
+        val current = _sessionState.value
+        if (current is ArcherySessionState.Active) {
+            val session = current.session
+            val newEndScores = if (session.arrowsPerEnd > 0 && session.endScores.size >= session.arrowsPerEnd) {
+                listOf(score)
+            } else {
+                session.endScores + score
+            }
+            _sessionState.value = ArcherySessionState.Active(
+                session.copy(
+                    totalScore = session.totalScore + score.value,
+                    endScores = newEndScores,
+                ),
+            )
+        }
         sendMessage(
             "/score/add",
             ByteBuffer
                 .allocate(8)
                 .putInt(sessionId)
-                .putInt(scoreId)
+                .putInt(score.id)
                 .array(),
         )
     }
 
     fun deleteLastScore(sessionId: Int) {
+        val current = _sessionState.value
+        if (current is ArcherySessionState.Active) {
+            val session = current.session
+            if (session.endScores.isNotEmpty()) {
+                val lastScore = session.endScores.last()
+                _sessionState.value = ArcherySessionState.Active(
+                    session.copy(
+                        totalScore = session.totalScore - lastScore.value,
+                        endScores = session.endScores.dropLast(1),
+                    ),
+                )
+            }
+        }
         sendMessage("/score/delete-last", ByteBuffer.allocate(4).putInt(sessionId).array())
     }
 
@@ -114,15 +146,28 @@ class ActiveSessionClient(
 
         val endLabels = dataMap.getStringArray("endScoreLabels") ?: emptyArray()
         val endColors = dataMap.getIntegerArrayList("endScoreColors") ?: arrayListOf()
-        val endScores = endLabels
-            .zip(endColors)
-            .map { (label, color) -> ArrowScore(0, label, Color(color)) }
+        val endValues = dataMap.getIntegerArrayList("endScoreValues") ?: arrayListOf()
+        val endScores = endLabels.indices.map { i ->
+            ArrowScore(
+                id = 0,
+                value = endValues.getOrElse(i) { 0 },
+                label = endLabels[i],
+                color = Color(endColors[i]),
+            )
+        }
 
         val keyIds = dataMap.getIntegerArrayList("keyboardScoreIds") ?: arrayListOf()
         val keyLabels = dataMap.getStringArray("keyboardScoreLabels") ?: emptyArray()
         val keyColors = dataMap.getIntegerArrayList("keyboardScoreColors") ?: arrayListOf()
-        val keyboardScores = keyIds.indices
-            .map { i -> ArrowScore(keyIds[i], keyLabels[i], Color(keyColors[i])) }
+        val keyValues = dataMap.getIntegerArrayList("keyboardScoreValues") ?: arrayListOf()
+        val keyboardScores = keyIds.indices.map { i ->
+            ArrowScore(
+                id = keyIds[i],
+                value = keyValues.getOrElse(i) { 0 },
+                label = keyLabels[i],
+                color = Color(keyColors[i]),
+            )
+        }
 
         return ArcherySession(
             sessionId = dataMap.getInt("sessionId"),
@@ -136,6 +181,7 @@ class ActiveSessionClient(
             else null,
             endScores = endScores,
             keyboardScores = keyboardScores,
+            arrowsPerEnd = dataMap.getInt("currentArrowsPerEnd"),
         )
     }
 }

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -109,9 +110,12 @@ class MainActivity : ComponentActivity() {
 fun WearApp() {
     val context = LocalContext.current
     val client = remember { ActiveSessionClient(context) }
-    val sessionState by client
-        .observeSession()
-        .collectAsState(initial = ArcherySessionState.Loading)
+    val sessionState by client.sessionState.collectAsState()
+
+    DisposableEffect(client) {
+        client.startListening()
+        onDispose { client.stopListening() }
+    }
 
     val isSessionActive = sessionState is ArcherySessionState.Active
 
@@ -204,7 +208,7 @@ fun WearApp() {
                         is ArcherySessionState.Active -> {
                             ScoringScreen(
                                 session = state.session,
-                                onScoreTapped = { score -> client.addScore(state.session.sessionId, score.id) },
+                                onScoreTapped = { score -> client.addScore(state.session.sessionId, score) },
                                 onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
                             )
                         }
