@@ -180,6 +180,31 @@ val standardRounds = listOf(
         ),
     ),
     StandardRound(
+        id = "american",
+        displayName = "American",
+        scoringSystem = ScoringSystems.imperial,
+        distances = listOf(
+            StandardRoundDistance(
+                distanceValue = DistanceValue(60, DistanceUnit.Yards),
+                arrows = 30,
+                defaultArrowsPerEnd = 6,
+                possibleArrowsPerEnd = listOf(3, 6),
+            ),
+            StandardRoundDistance(
+                distanceValue = DistanceValue(50, DistanceUnit.Yards),
+                arrows = 30,
+                defaultArrowsPerEnd = 6,
+                possibleArrowsPerEnd = listOf(3, 6),
+            ),
+            StandardRoundDistance(
+                distanceValue = DistanceValue(40, DistanceUnit.Yards),
+                arrows = 30,
+                defaultArrowsPerEnd = 6,
+                possibleArrowsPerEnd = listOf(3, 6),
+            ),
+        ),
+    ),
+    StandardRound(
         id = "252_60",
         displayName = "252 - 60 yds",
         scoringSystem = ScoringSystems.imperial,
