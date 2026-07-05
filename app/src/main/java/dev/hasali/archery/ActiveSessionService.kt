@@ -62,6 +62,10 @@ class ActiveSessionService : Service() {
             sessionRepository
                 .watchSession(sessionId)
                 .collect { session ->
+                    if (session == null) {
+                        stopSelf()
+                        return@collect
+                    }
                     if (ActivityCompat.checkSelfPermission(
                             this@ActiveSessionService,
                             Manifest.permission.POST_NOTIFICATIONS,

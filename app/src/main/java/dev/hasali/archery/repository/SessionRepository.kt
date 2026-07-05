@@ -63,18 +63,18 @@ class SessionRepository(
             mapToSession(entity, arrows)
         }
 
-    fun watchSession(sessionId: Int): Flow<Session> =
+    fun watchSession(sessionId: Int): Flow<Session?> =
         combine(
             database.sessionQueries
                 .selectById(sessionId.toLong())
                 .asFlow()
-                .map { it.executeAsOne() },
+                .map { it.executeAsOneOrNull() },
             database.arrowScoreQueries
                 .selectAllBySessionId(sessionId.toLong())
                 .asFlow()
                 .mapToList(Dispatchers.IO),
-        ) { sessions, arrows ->
-            mapToSession(sessions, arrows)
+        ) { session, arrows ->
+            session?.let { mapToSession(it, arrows) }
         }
 
     suspend fun createSession(params: NewSessionParams): Int =
