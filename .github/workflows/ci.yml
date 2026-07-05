@@ -27,7 +27,7 @@ jobs:
           echo "keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEYSTORE_KEY_ALIAS }}" >> key.properties
           echo "storeFile=$(pwd)/keystore.jks" >> key.properties
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease -PversionCode=${{ github.run_number }}
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
 
