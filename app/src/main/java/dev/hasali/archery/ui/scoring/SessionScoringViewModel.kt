@@ -31,7 +31,7 @@ class SessionScoringViewModel(
                 .watchSession(sessionId)
                 .collect { session ->
                     _uiState.update {
-                        it.copy(session = session, scores = session.scores, isLoading = false)
+                        it.copy(session = session, scores = session?.scores ?: emptyList(), isLoading = false)
                     }
                 }
         }
