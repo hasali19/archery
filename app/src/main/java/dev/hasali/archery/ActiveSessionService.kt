@@ -63,8 +63,6 @@ class ActiveSessionService : Service() {
                 .watchSession(sessionId)
                 .collect { session ->
                     if (session == null) {
-                        wearPublisher.clear()
-                        ServiceCompat.stopForeground(this@ActiveSessionService, ServiceCompat.STOP_FOREGROUND_REMOVE)
                         stopSelf()
                         return@collect
                     }
