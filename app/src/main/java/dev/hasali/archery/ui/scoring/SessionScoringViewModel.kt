@@ -30,8 +30,10 @@ class SessionScoringViewModel(
             repo
                 .watchSession(sessionId)
                 .collect { session ->
-                    _uiState.update {
-                        it.copy(session = session, scores = session?.scores ?: emptyList(), isLoading = false)
+                    if (session != null) {
+                        _uiState.update {
+                            it.copy(session = session, scores = session.scores, isLoading = false)
+                        }
                     }
                 }
         }
