@@ -24,6 +24,7 @@ class WearSessionPublisher(
                 dataMap.putInt("sessionId", sessionId)
                 dataMap.putInt("totalScore", session.scores.sumOf { it.value })
                 dataMap.putString("sessionName", session.roundDetails.displayName)
+                dataMap.putBoolean("hasMultipleDistances", session.roundDetails.distances.size > 1)
                 val dist = getCurrentDistance(session)
                 if (dist != null) {
                     dataMap.putInt("currentDistanceValue", dist.value)

@@ -182,7 +182,7 @@ fun WearApp() {
                                     fontSize = 14.sp,
                                 )
                             }
-                            session.currentDistance?.let { dist ->
+                            session.currentDistance?.takeIf { session.hasMultipleDistances }?.let { dist ->
                                 val suffix = if (dist.unit == DistanceUnit.Metres) "m" else "yd"
                                 Text(
                                     text = "${dist.value}$suffix",

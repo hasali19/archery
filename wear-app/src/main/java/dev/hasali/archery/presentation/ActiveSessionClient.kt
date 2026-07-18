@@ -33,6 +33,7 @@ data class ArcherySession(
     val totalScore: Int,
     val name: String?,
     val currentDistance: CurrentDistance?,
+    val hasMultipleDistances: Boolean,
     val endScores: List<ArrowScore>,
     val keyboardScores: List<ArrowScore>,
     val arrowsPerEnd: Int,
@@ -179,6 +180,7 @@ class ActiveSessionClient(
                     unit = DistanceUnit.valueOf(dataMap.getString("currentDistanceUnit") ?: "Metres"),
                 )
             else null,
+            hasMultipleDistances = dataMap.getBoolean("hasMultipleDistances"),
             endScores = endScores,
             keyboardScores = keyboardScores,
             arrowsPerEnd = dataMap.getInt("currentArrowsPerEnd"),
