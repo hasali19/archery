@@ -1,8 +1,11 @@
 package dev.hasali.archery.ui
 
 import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -18,6 +21,8 @@ import dev.hasali.archery.ui.scoring.SessionScoringScreen
 import dev.hasali.archery.ui.scoring.SessionScoringViewModelFactory
 import dev.hasali.archery.ui.sessions.SessionsScreen
 import dev.hasali.archery.ui.sessions.SessionsViewModelFactory
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 private const val ROUTE_SESSIONS = "sessions"
 private const val ROUTE_SESSION_SCORING = "session/{sessionId}"
@@ -33,10 +38,26 @@ fun AppNavigation(app: ArcheryApplication) {
             val vm = viewModel<dev.hasali.archery.ui.sessions.SessionsViewModel>(
                 factory = SessionsViewModelFactory(app.sessionRepository),
             )
+
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+
             SessionsScreen(
                 viewModel = vm,
                 onNavigateToSession = { sessionId ->
                     navController.navigate("session/$sessionId")
+                },
+                onExportDatabase = { uri: Uri ->
+                    scope.launch {
+                        try {
+                            app.exportDatabaseTo(uri)
+                            Toast.makeText(context, "Database exported", Toast.LENGTH_SHORT).show()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Failed to export database", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
             )
         }

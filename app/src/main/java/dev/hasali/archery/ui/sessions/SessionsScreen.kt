@@ -1,5 +1,8 @@
 package dev.hasali.archery.ui.sessions
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,9 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -27,6 +32,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -102,6 +108,7 @@ private fun ChoiceChip(
 fun SessionsScreen(
     viewModel: SessionsViewModel,
     onNavigateToSession: (Int) -> Unit,
+    onExportDatabase: (Uri) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -109,7 +116,12 @@ fun SessionsScreen(
 
     var showNewSessionDialog by rememberSaveable { mutableStateOf(false) }
     var sessionToDelete by remember { mutableStateOf<Session?>(null) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
+
+    val exportDatabaseLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri -> uri?.let(onExportDatabase) }
 
     if (showNewSessionDialog) {
         NewSessionDialog(
@@ -151,7 +163,28 @@ fun SessionsScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Sessions") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Sessions") },
+                actions = {
+                    IconButton(onClick = { showOverflowMenu = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownMenu(
+                        expanded = showOverflowMenu,
+                        onDismissRequest = { showOverflowMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Export database") },
+                            onClick = {
+                                showOverflowMenu = false
+                                exportDatabaseLauncher.launch("archery-backup.db")
+                            },
+                        )
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showNewSessionDialog = true }) {
                 Icon(Icons.Filled.Add, contentDescription = "New Session")
