@@ -36,6 +36,7 @@ data class ArcherySession(
     val endScores: List<ArrowScore>,
     val keyboardScores: List<ArrowScore>,
     val arrowsPerEnd: Int,
+    val isRoundComplete: Boolean,
 )
 
 sealed interface ArcherySessionState {
@@ -92,6 +93,8 @@ class ActiveSessionClient(
         val current = _sessionState.value
         if (current is ArcherySessionState.Active) {
             val session = current.session
+            if (session.isRoundComplete) return
+
             val newEndScores = if (session.arrowsPerEnd > 0 && session.endScores.size >= session.arrowsPerEnd) {
                 listOf(score)
             } else {
@@ -182,6 +185,7 @@ class ActiveSessionClient(
             endScores = endScores,
             keyboardScores = keyboardScores,
             arrowsPerEnd = dataMap.getInt("currentArrowsPerEnd"),
+            isRoundComplete = dataMap.getBoolean("isRoundComplete"),
         )
     }
 }

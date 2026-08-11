@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -303,7 +304,8 @@ private fun ScoringScreen(
                                                 .padding(2.dp)
                                                 .clip(SquircleShape())
                                                 .background(score.color)
-                                                .clickable { onScoreTapped(score) },
+                                                .alpha(if (session.isRoundComplete) 0.4f else 1f)
+                                                .clickable(enabled = !session.isRoundComplete) { onScoreTapped(score) },
                                     ) {
                                         val contentColor = LocalContentColor.current
                                         BasicText(

@@ -40,7 +40,10 @@ class SessionScoringViewModel(
     }
 
     fun addScore(score: Score) {
-        val newIndex = _uiState.value.scores.size
+        val state = _uiState.value
+        val session = state.session ?: return
+        val newIndex = state.scores.size
+        if (newIndex >= session.roundDetails.totalArrows) return
         viewModelScope.launch {
             repo.insertScore(sessionId, newIndex, score.id)
         }

@@ -15,7 +15,9 @@ data class RoundDetails(
     val displayName: String,
     val scoringSystem: ScoringSystem,
     val distances: List<RoundDistance>,
-)
+) {
+    val totalArrows get() = distances.sumOf { it.arrows }
+}
 
 data class RoundDistance(
     val distanceValue: DistanceValue,

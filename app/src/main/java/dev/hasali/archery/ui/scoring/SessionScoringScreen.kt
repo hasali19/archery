@@ -245,6 +245,7 @@ fun SessionScoringScreen(
                     scoringSystem = session.roundDetails.scoringSystem,
                     onScorePress = viewModel::addScore,
                     onBackspacePress = viewModel::removeLastScore,
+                    scoringEnabled = scores.size < session.roundDetails.totalArrows,
                     modifier = Modifier.padding(8.dp),
                 )
             }

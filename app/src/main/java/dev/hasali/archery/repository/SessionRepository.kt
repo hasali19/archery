@@ -121,6 +121,13 @@ class SessionRepository(
         index: Int,
         scoreId: Int,
     ) = withContext(Dispatchers.IO) {
+        // Guard against appending scores past the end of the round, regardless of
+        // which client (phone or watch) issued the request.
+        val session = getSession(sessionId)
+        if (index >= session.roundDetails.totalArrows) {
+            return@withContext
+        }
+
         database.arrowScoreQueries.insert(
             sessionId = sessionId.toLong(),
             index = index.toLong(),
