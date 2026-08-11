@@ -33,7 +33,6 @@ class WearSessionPublisher(
                 dataMap.putIntegerArrayList("endScoreColors", ArrayList(endScores.map { it.color.toArgb() }))
                 dataMap.putIntegerArrayList("endScoreValues", ArrayList(endScores.map { it.value }))
                 dataMap.putInt("currentArrowsPerEnd", getCurrentArrowsPerEnd(session))
-                dataMap.putBoolean("isRoundComplete", session.scores.size >= session.roundDetails.totalArrows)
                 dataMap.putIntegerArrayList("keyboardScoreIds", ArrayList(keyboard.map { it.id }))
                 dataMap.putStringArray("keyboardScoreLabels", keyboard.map { it.label }.toTypedArray())
                 dataMap.putIntegerArrayList("keyboardScoreColors", ArrayList(keyboard.map { it.color.toArgb() }))

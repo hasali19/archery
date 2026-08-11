@@ -26,7 +26,6 @@ fun ScoreKeyboard(
     onScorePress: (Score) -> Unit,
     onBackspacePress: () -> Unit,
     modifier: Modifier = Modifier,
-    scoringEnabled: Boolean = true,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -45,7 +44,6 @@ fun ScoreKeyboard(
                                     haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
                                     onScorePress(score)
                                 },
-                                enabled = scoringEnabled,
                                 modifier = Modifier.width(buttonWidth).padding(horizontal = 4.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = score.color,
