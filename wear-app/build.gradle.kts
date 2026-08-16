@@ -13,6 +13,15 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val projectVersionCode = if (project.hasProperty("versionCode")) {
+    project
+        .property("versionCode")
+        ?.toString()
+        ?.toInt()
+} else {
+    1
+}
+
 android {
     namespace = "dev.hasali.archery"
     compileSdk {
@@ -25,7 +34,7 @@ android {
         applicationId = "dev.hasali.archery"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
+        versionCode = projectVersionCode
         versionName = "1.0"
     }
 
