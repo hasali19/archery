@@ -16,17 +16,13 @@ class SettingsRepository(
     suspend fun exportDatabase(destination: Uri) =
         withContext(Dispatchers.IO) {
             // Ensure all writes are flushed from the WAL into the main database file so
-            // that the exported copy is self-contained and up to date. This has to be run
-            // as a query rather than an update/exec, since PRAGMA wal_checkpoint returns a
-            // result row (busy, log, checkpointed) and Android's SQLiteStatement rejects
-            // statements that return rows when executed via executeUpdateDelete.
-            val checkpointResult = driver.executeQuery(
+            // that the exported copy is self-contained and up to date.
+            driver.executeQuery(
                 identifier = null,
                 sql = "PRAGMA wal_checkpoint(TRUNCATE);",
                 mapper = { QueryResult.Value(Unit) },
                 parameters = 0,
-            )
-            checkpointResult.value
+            ).await()
 
             val dbFile = context.getDatabasePath(databaseName)
 
