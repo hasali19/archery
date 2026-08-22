@@ -1,6 +1,7 @@
 package dev.hasali.archery.ui.settings
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,6 +10,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+
+private const val TAG = "SettingsViewModel"
 
 sealed interface SettingsEvent {
     data object ExportSucceeded : SettingsEvent
@@ -27,7 +30,8 @@ class SettingsViewModel(
             val event = try {
                 repo.exportDatabase(destination)
                 SettingsEvent.ExportSucceeded
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to export database to $destination", e)
                 SettingsEvent.ExportFailed
             }
             _events.emit(event)
