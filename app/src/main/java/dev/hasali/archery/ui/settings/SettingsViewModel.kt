@@ -17,6 +17,12 @@ sealed interface SettingsEvent {
     data object ExportSucceeded : SettingsEvent
 
     data object ExportFailed : SettingsEvent
+
+    // Emitted once the on-disk database has been fully replaced. The caller is expected to
+    // restart the app in response, since the existing database connection is no longer usable.
+    data object ImportSucceeded : SettingsEvent
+
+    data object ImportFailed : SettingsEvent
 }
 
 class SettingsViewModel(
@@ -33,6 +39,19 @@ class SettingsViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to export database to $destination", e)
                 SettingsEvent.ExportFailed
+            }
+            _events.emit(event)
+        }
+    }
+
+    fun importDatabase(source: Uri) {
+        viewModelScope.launch {
+            val event = try {
+                repo.importDatabase(source)
+                SettingsEvent.ImportSucceeded
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to import database from $source", e)
+                SettingsEvent.ImportFailed
             }
             _events.emit(event)
         }
