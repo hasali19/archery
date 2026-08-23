@@ -1,0 +1,66 @@
+package dev.hasali.archery.ui.settings
+
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import dev.hasali.archery.repository.SettingsRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+
+private const val TAG = "SettingsViewModel"
+
+sealed interface SettingsEvent {
+    data object ExportSucceeded : SettingsEvent
+
+    data object ExportFailed : SettingsEvent
+
+    // Emitted once the on-disk database has been fully replaced. The caller is expected to
+    // restart the app in response, since the existing database connection is no longer usable.
+    data object ImportSucceeded : SettingsEvent
+
+    data object ImportFailed : SettingsEvent
+}
+
+class SettingsViewModel(
+    private val repo: SettingsRepository,
+) : ViewModel() {
+    private val _events = MutableSharedFlow<SettingsEvent>()
+    val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
+
+    fun exportDatabase(destination: Uri) {
+        viewModelScope.launch {
+            val event = try {
+                repo.exportDatabase(destination)
+                SettingsEvent.ExportSucceeded
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to export database to $destination", e)
+                SettingsEvent.ExportFailed
+            }
+            _events.emit(event)
+        }
+    }
+
+    fun importDatabase(source: Uri) {
+        viewModelScope.launch {
+            val event = try {
+                repo.importDatabase(source)
+                SettingsEvent.ImportSucceeded
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to import database from $source", e)
+                SettingsEvent.ImportFailed
+            }
+            _events.emit(event)
+        }
+    }
+}
+
+class SettingsViewModelFactory(
+    private val repo: SettingsRepository,
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = SettingsViewModel(repo) as T
+}
