@@ -53,6 +53,7 @@ private sealed interface ScoreSheetItem {
     data class DistanceHeader(
         val label: String,
         val total: Int,
+        val average: Double,
     ) : ScoreSheetItem
 
     data class EndRow(
@@ -78,9 +79,15 @@ private fun buildScoreSheetItems(
             emptyList()
         }
         val distanceTotal = distanceScores.sumOf { it.value }
+        val distanceAverage = if (distanceScores.isEmpty()) {
+            0.0
+        } else {
+            distanceTotal.toDouble() / distanceScores.size
+        }
         items += ScoreSheetItem.DistanceHeader(
             label = "${distance.distanceValue.value} ${distance.distanceValue.unit.name}",
             total = distanceTotal,
+            average = distanceAverage,
         )
         items += ScoreSheetItem.Divider
         for (end in 0 until distance.ends) {
@@ -281,7 +288,10 @@ private fun DistanceHeaderRow(item: ScoreSheetItem.DistanceHeader) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(item.label, style = MaterialTheme.typography.titleSmall)
-        Text("Total: ${item.total}", style = MaterialTheme.typography.titleSmall)
+        Text(
+            "Total: ${item.total}  Average: ${"%.2f".format(item.average)}",
+            style = MaterialTheme.typography.titleSmall,
+        )
     }
 }
 
