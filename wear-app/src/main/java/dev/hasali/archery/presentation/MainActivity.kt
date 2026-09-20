@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -69,7 +71,6 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
 import com.google.android.horologist.compose.ambient.AmbientAware
-import com.google.android.horologist.compose.ambient.AmbientState
 import dev.hasali.archery.R
 import dev.hasali.archery.presentation.theme.AndroidTheme
 import kotlin.math.PI
@@ -162,58 +163,84 @@ fun WearApp() {
         AndroidTheme {
             AppScaffold {
                 if (ambientState.isAmbient && sessionState is ArcherySessionState.Active) {
-                    val session = (sessionState as ArcherySessionState.Active).session
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black),
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "${session.totalScore}",
-                                color = Color.White,
-                                fontSize = 48.sp,
-                            )
-                            session.name?.let {
-                                Text(
-                                    text = it,
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                )
-                            }
-                            session.currentDistance?.let { dist ->
-                                val suffix = if (dist.unit == DistanceUnit.Metres) "m" else "yd"
-                                Text(
-                                    text = "${dist.value}$suffix",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                )
-                            }
-                        }
-                    }
+                    SessionSummary((sessionState as ArcherySessionState.Active).session)
                 } else {
-                    when (val state = sessionState) {
-                        ArcherySessionState.Loading -> {}
-
-                        ArcherySessionState.Inactive -> {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                Text("No session active")
-                            }
-                        }
-
-                        is ArcherySessionState.Active -> {
-                            ScoringScreen(
-                                session = state.session,
-                                onScoreTapped = { score -> client.addScore(state.session.sessionId, score) },
-                                onBackspaceTapped = { client.deleteLastScore(state.session.sessionId) },
-                            )
-                        }
-                    }
+                    MainScreenContent(sessionState, client)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainScreenContent(
+    sessionState: ArcherySessionState,
+    client: ActiveSessionClient,
+) {
+    when (sessionState) {
+        ArcherySessionState.Loading -> {}
+
+        ArcherySessionState.Inactive -> {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Text("No session active")
+            }
+        }
+
+        is ArcherySessionState.Active -> {
+            val pagerState = rememberPagerState { 2 }
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (page) {
+                    0 -> ScoringScreen(
+                        session = sessionState.session,
+                        onScoreTapped = { score ->
+                            client.addScore(sessionState.session.sessionId, score)
+                        },
+                        onBackspaceTapped = {
+                            client.deleteLastScore(sessionState.session.sessionId)
+                        },
+                    )
+
+                    else -> SessionSummary(sessionState.session)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionSummary(session: ArcherySession) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "${session.totalScore}",
+                color = Color.White,
+                fontSize = 48.sp,
+            )
+            session.name?.let {
+                Text(
+                    text = it,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                )
+            }
+            session.currentDistance?.let { dist ->
+                val suffix = if (dist.unit == DistanceUnit.Metres) "m" else "yd"
+                Text(
+                    text = "${dist.value}$suffix",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                )
             }
         }
     }
