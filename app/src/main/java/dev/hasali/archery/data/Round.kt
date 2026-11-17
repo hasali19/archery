@@ -29,6 +29,19 @@ val standardRounds = listOf(
         ),
     ),
     StandardRound(
+        id = "wa_18",
+        displayName = "WA 18",
+        scoringSystem = ScoringSystems.metric,
+        distances = listOf(
+            StandardRoundDistance(
+                distanceValue = DistanceValue(18, DistanceUnit.Metres),
+                arrows = 60,
+                defaultArrowsPerEnd = 3,
+                possibleArrowsPerEnd = listOf(3, 6),
+            ),
+        ),
+    ),
+    StandardRound(
         id = "frostbite",
         displayName = "Frostbite",
         scoringSystem = ScoringSystems.metric,
